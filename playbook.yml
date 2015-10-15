@@ -1,0 +1,259 @@
+#!/usr/bin/env ansible-playbook
+
+- name: Gather prerequisites 
+  hosts: all
+  gather_facts: True
+  tasks:
+    - name: create groups based on distribution
+      group_by: key={{ ansible_distribution }}
+
+- name: Install Version Control Systems
+  hosts: Ubuntu
+  sudo: True
+  tasks:
+    - name: Install Git
+      apt: name=git state=latest update_cache=true cache_valid_time=600
+    - name: Install Subversion
+      apt: name=subversion state=latest update_cache=true cache_valid_time=600
+    - name: Install Mercurial
+      apt: name=mercurial state=latest update_cache=true cache_valid_time=600
+
+- name: Install Utilities
+  hosts: Ubuntu
+  sudo: True
+  tasks:
+    - name: Install sshpass for some of the Docker scripting
+      apt: name=sshpass state=latest update_cache=true cache_valid_time=600
+    - name: I am not sure why Firefox isn't installed so I'm doing it now
+      apt: name=firefox state=latest update_cache=true cache_valid_time=600
+
+- name: Install JDK
+  hosts: Ubuntu
+  sudo: True
+  tasks:
+    - name: Download Java 8 JDK
+      command: wget --quiet --output-document=/root/jdk-8.tar.gz --no-check-certificate --no-cookies --header "Cookie:oraclelicense=accept-securebackup-cookie" http://download.oracle.com/otn-pub/java/jdk/8u60-b27/jdk-8u60-linux-x64.tar.gz
+    - name: Create destination directory
+      file: path=/usr/lib/jvm owner=root group=root state=directory mode=755
+    - name: unpack the archive
+      unarchive: src=/root/jdk-8.tar.gz dest=/usr/lib/jvm copy=no owner=root group=root mode=755 creates=/usr/lib/jvm/jdk1.8.0_60/COPYRIGHT
+    - name: soft-link the JDK to a normalized location
+      file: src=/usr/lib/jvm/jdk1.8.0_60 dest=/usr/lib/jvm/oracle-jdk-8 owner=root group=root state=link 
+    - name: Export JDK_HOME
+      lineinfile: dest=/etc/environment line='JDK_HOME=/usr/lib/jvm/oracle-jdk-8'
+    - name: Export JAVA_HOME
+      lineinfile: dest=/etc/environment line='JAVA_HOME=/usr/lib/jvm/oracle-jdk-8'
+    - name: Export JAVA_CMD
+      lineinfile: dest=/etc/environment line='JAVA_CMD=/usr/lib/jvm/oracle-jdk-8/bin/java'
+
+- name: Install The Software Development Kit Manager
+  hosts: Ubuntu
+  sudo: True
+  tasks:
+    - debug: msg="ansible_env.SUDO_USER = {{ ansible_env.SUDO_USER }}"
+    - debug: msg="ansible_env.SUDO_UID = {{ ansible_env.SUDO_UID }}"
+    - debug: msg="ansible_env.SUDO_GID = {{ ansible_env.SUDO_GID }}"
+    - debug: msg="ansible_env.USER = {{ ansible_env.USER }}"
+    - debug: msg="ansible_env.USERNAME = {{ ansible_env.USERNAME }}"
+    - debug: msg="ansible_env.LOGNAME = {{ ansible_env.LOGNAME }}"
+    - debug: msg="ansible_env.HOME = {{ ansible_env.HOME }}"
+    - debug: msg="ansible_user_id = {{ ansible_user_id }}"
+    - name: Install cURL
+      apt: name=curl state=latest
+    - name: Copy GVM installation script to a safe place
+      copy: src=scripts/install-gvm.sh dest=/tmp/install-gvm.sh owner=vagrant group=vagrant mode=755 backup=no
+    - name: Install GVM
+      shell: sudo --user vagrant --set-home --non-interactive --login /tmp/install-gvm.sh --
+    - name: Create destination director
+      file: path=/home/vagrant/.gvm/etc owner=vagrant group=vagrant state=directory mode=755
+    - name: Copy GVM configuration file
+      copy: src=files/gvm.config dest=/home/vagrant/.gvm/etc/config owner=vagrant group=vagrant mode=644 backup=no
+    - name: Set permissions on the home directory
+      file: path=/home/vagrant owner=vagrant group=vagrant recurse=true state=directory
+
+- name: Install Clojure
+  hosts: Ubuntu
+  sudo: False
+  tasks:
+      - name: Create bin directory
+        file: path=/home/vagrant/bin owner=vagrant group=vagrant state=directory mode=755
+      - name: Install Leiningen
+        get_url: url=https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein dest=/home/vagrant/bin/lein mode=0744
+      - name: Set permissions on the home directory
+        file: path=/home/vagrant owner=vagrant group=vagrant recurse=true state=directory
+
+- name: Apache Ant bits
+  hosts: Ubuntu
+  sudo: False
+  tasks:
+      - debug: msg="ansible_env.SUDO_USER = {{ ansible_env.SUDO_USER }}"
+      - debug: msg="ansible_env.SUDO_UID = {{ ansible_env.SUDO_UID }}"
+      - debug: msg="ansible_env.SUDO_GID = {{ ansible_env.SUDO_GID }}"
+      - debug: msg="ansible_env.USER = {{ ansible_env.USER }}"
+      - debug: msg="ansible_env.USERNAME = {{ ansible_env.USERNAME }}"
+      - debug: msg="ansible_env.LOGNAME = {{ ansible_env.LOGNAME }}"
+      - debug: msg="ansible_env.HOME = {{ ansible_env.HOME }}"
+      - debug: msg="ansible_user_id = {{ ansible_user_id }}"
+      - name: Create Software directory
+        file: path=/home/vagrant/Software owner=vagrant group=vagrant state=directory mode=755
+      - name: Create Downloads directory
+        file: path=/home/vagrant/Downloads owner=vagrant group=vagrant state=directory mode=755
+      - name: Download Ant
+        get_url: url=http://mirrors.ibiblio.org/apache//ant/binaries/apache-ant-1.9.5-bin.tar.gz dest=/home/vagrant/Downloads/ant.tar.gz mode=444
+      - name: Unpack Ant
+        unarchive: src=/home/vagrant/Downloads/ant.tar.gz dest=/home/vagrant/Software copy=no owner=vagrant group=vagrant creates=/home/vagrant/Software/apache-ant-1.9.5/README
+      - name: Soft-link Ant
+        file: src=/home/vagrant/Software/apache-ant-1.9.5 path=/home/vagrant/Software/ant state=link
+      - name: Export ANT_HOME
+        lineinfile: dest=/etc/environment line='ANT_HOME=/home/vagrant/Software/ant'
+      - name: Set permissions on the home directory
+        file: path=/home/vagrant owner=vagrant group=vagrant recurse=true state=directory
+
+- name: Apache Maven bits
+  hosts: Ubuntu
+  sudo: False
+  tasks:
+      - name: Create Software directory
+        file: path=/home/vagrant/Software owner=vagrant group=vagrant state=directory mode=755
+      - name: Create Downloads directory
+        file: path=/home/vagrant/Downloads owner=vagrant group=vagrant state=directory mode=755
+      - name: Download Maven
+        get_url: url=http://mirrors.ibiblio.org/apache/maven/maven-3/3.3.3/binaries/apache-maven-3.3.3-bin.tar.gz dest=/home/vagrant/Downloads/maven.tar.gz mode=444
+      - name: Unpack Maven
+        unarchive: src=/home/vagrant/Downloads/maven.tar.gz dest=/home/vagrant/Software copy=no owner=vagrant group=vagrant creates=/home/vagrant/Software/apache-maven-3.3.3/NOTICE
+      - name: Soft-link Maven
+        file: src=/home/vagrant/Software/apache-maven-3.3.3 path=/home/vagrant/Software/maven state=link
+      - name: Export M2_HOME
+        lineinfile: dest=/etc/environment line='M2_HOME=/home/vagrant/Software/maven'
+      - name: Set permissions on the home directory
+        file: path=/home/vagrant owner=vagrant group=vagrant recurse=true state=directory
+
+- name: Node
+  hosts: Ubuntu
+  sudo: True
+  tasks:
+      - name: Download Node
+        get_url: url=http://nodejs.org/dist/v0.12.7/node-v0.12.7-linux-x64.tar.gz dest=/root/node.tar.gz mode=444
+      - name: Unpack Node
+        unarchive: src=/root/node.tar.gz dest=/opt copy=no owner=root group=root creates=/opt/node-v0.12.7-linux-x64/LICENSE
+      - name: Soft-link Node
+        file: src=/opt/node-v0.12.7-linux-x64/bin/node path=/usr/local/bin/node state=link
+      - name: Soft-link NPM
+        file: src=/opt/node-v0.12.7-linux-x64/bin/npm path=/usr/local/bin/npm state=link
+      - name: Set permissions on the opt directory
+        file: path=/opt owner=root group=root recurse=true state=directory
+      - name: Update npm
+        command: /usr/local/bin/npm install -g npm@latest
+      - name: Install Yeoman 
+        npm: name=yo global=yes
+      - name: Install Bower 
+        npm: name=bower global=yes
+      - name: Install Grunt 
+        npm: name=grunt-cli global=yes
+      - name: Install JHipster 
+        npm: name=generator-jhipster global=yes
+
+- name: Jetbrains IntelliJ IDEA
+  hosts: Ubuntu
+  sudo: False
+  tasks:
+      - name: Create Software directory
+        file: path=/home/vagrant/Software owner=vagrant group=vagrant state=directory mode=755
+      - name: Create Downloads directory
+        file: path=/home/vagrant/Downloads owner=vagrant group=vagrant state=directory mode=755
+      - name: Download IntelliJ IDEA
+        get_url: url=http://download.jetbrains.com/idea/ideaIU-14.1.5.tar.gz dest=/home/vagrant/Downloads/idea.tar.gz mode=444
+      - name: Unpack IntelliJ IDEA
+        unarchive: src=/home/vagrant/Downloads/idea.tar.gz dest=/home/vagrant/Software copy=no owner=vagrant group=vagrant creates=/home/vagrant/Software/idea-IU-141.2735.5/build.txt
+      - name: Soft-link IntelliJ
+        file: src=/home/vagrant/Software/idea-IU-141.2735.5 path=/home/vagrant/Software/idea state=link
+      - name: Create Desktop directory
+        file: path=/home/vagrant/Desktop owner=vagrant group=vagrant state=directory mode=755
+      - name: Copy desktop IntelliJ file
+        copy: src=files/InjelliJ.desktop dest=/home/vagrant/Desktop/InjelliJ.desktop owner=vagrant group=vagrant backup=no mode=755
+      - name: Export IDEA_JDK
+        lineinfile: dest=/etc/environment line='IDEA_JDK=/usr/lib/jvm/oracle-jdk-8'
+      - name: Set permissions on the home directory
+        file: path=/home/vagrant owner=vagrant group=vagrant recurse=true state=directory
+
+- name: DbVisualizer Database Browser 
+  hosts: Ubuntu
+  sudo: False
+  tasks:
+      - name: Create Software directory 
+        file: path=/home/vagrant/Software owner=vagrant group=vagrant state=directory mode=755
+      - name: Create Downloads directory
+        file: path=/home/vagrant/Downloads owner=vagrant group=vagrant state=directory mode=755
+      - name: Download DbVisualizer 
+        get_url: url=https://www.dbvis.com/product_download/dbvis-9.2.10/media/dbvis_unix_9_2_10.tar.gz dest=/home/vagrant/Downloads/dbvis.tar.gz mode=444 
+      - name: Unpack DbVisualizer 
+        unarchive: src=/home/vagrant/Downloads/dbvis.tar.gz dest=/home/vagrant/Software copy=no owner=vagrant group=vagrant creates=/home/vagrant/Software/DbVisualizer
+      - name: Create Desktop directory 
+        file: path=/home/vagrant/Desktop owner=vagrant group=vagrant state=directory mode=755
+      - name: Copy desktop DbVisualizer file  
+        copy: src=files/Database.desktop dest=/home/vagrant/Desktop/Database.desktop owner=vagrant group=vagrant backup=no mode=755
+      - name: Set permissions on the home directory
+        file: path=/home/vagrant owner=vagrant group=vagrant recurse=true state=directory
+
+- name: logFACES Client 
+  hosts: Ubuntu
+  sudo: False
+  tasks:
+      - name: Create Software directory 
+        file: path=/home/vagrant/Software owner=vagrant group=vagrant state=directory mode=755
+      - name: Create Downloads directory
+        file: path=/home/vagrant/Downloads owner=vagrant group=vagrant state=directory mode=755
+      - name: Download logFACES 
+        get_url: url=http://www.moonlit-software.com/logfaces/downloads/lfc.4.2.1.linux.gtk.x86_64.tar.gz dest=/home/vagrant/Downloads/logfaces.tar.gz mode=444 
+      - name: Unpack logFACES 
+        unarchive: src=/home/vagrant/Downloads/logfaces.tar.gz dest=/home/vagrant/Software copy=no owner=vagrant group=vagrant creates=/home/vagrant/Software/logFacesClient/about.html
+      - name: soft-link the JDK to a normalized location
+        file: src=/usr/lib/jvm/oracle-jdk-8/jre dest=/home/vagrant/Software/logFacesClient/jre owner=root group=root state=link
+      - name: Create Desktop directory 
+        file: path=/home/vagrant/Desktop owner=vagrant group=vagrant state=directory mode=755
+      - name: Copy desktop logFACES file  
+        copy: src=files/logFACES.desktop dest=/home/vagrant/Desktop/logFACES.desktop owner=vagrant group=vagrant backup=no mode=755
+      - name: Set permissions on the home directory
+        file: path=/home/vagrant owner=vagrant group=vagrant recurse=true state=directory
+
+- name: MySQL Tools
+  hosts: Ubuntu
+  sudo: True
+  tasks:
+      - name: Install MySQL client
+        apt: name=mysql-client state=latest
+      - name: Install MySQL Workbench
+        apt: name=mysql-workbench state=latest
+
+- name: Create Source Folders
+  hosts: Ubuntu
+  sudo: False
+  tasks:
+      - name: Create GitHub directory
+        file: path=/home/vagrant/GitHub owner=vagrant group=vagrant state=directory mode=755
+      - name: Create Bitbucket directory
+        file: path=/home/vagrant/Bitbucket owner=vagrant group=vagrant state=directory mode=755
+      - name: Create Stash directory
+        file: path=/home/vagrant/Stash owner=vagrant group=vagrant state=directory mode=755
+      - name: Create .lazybones directory
+        file: path=/home/vagrant/.lazybones owner=vagrant group=vagrant state=directory mode=755
+      - name: Copy lazybones configurations file
+        copy: src=files/config.groovy dest=/home/vagrant/.lazybones/config.groovy owner=vagrant group=vagrant backup=no mode=744
+
+- name: Install HTTP IE (cURL replacement)
+  hosts: Ubuntu
+  sudo: True
+  tasks:
+      - pip: name=setuptools
+      - pip: name=httpie
+
+- name: Add host names for Dockered services
+  hosts: Ubuntu
+  sudo: True
+  tasks:
+      - lineinfile: dest=/etc/hosts line='127.0.0.1 mongo'
+      - lineinfile: dest=/etc/hosts line='127.0.0.1 mongodb'
+      - lineinfile: dest=/etc/hosts line='127.0.0.1 redis'
+      - lineinfile: dest=/etc/hosts line='127.0.0.1 mysql'
+      - lineinfile: dest=/etc/hosts line='127.0.0.1 postgresql'
+      - lineinfile: dest=/etc/hosts line='127.0.0.1 rabbitmq'
