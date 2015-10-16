@@ -13,10 +13,6 @@
   tasks:
     - name: Install Git
       apt: name=git state=latest update_cache=true cache_valid_time=600
-    - name: Install Subversion
-      apt: name=subversion state=latest update_cache=true cache_valid_time=600
-    - name: Install Mercurial
-      apt: name=mercurial state=latest update_cache=true cache_valid_time=600
 
 - name: Install Utilities
   hosts: Ubuntu
@@ -24,8 +20,6 @@
   tasks:
     - name: Install sshpass for some of the Docker scripting
       apt: name=sshpass state=latest update_cache=true cache_valid_time=600
-    - name: I am not sure why Firefox isn't installed so I'm doing it now
-      apt: name=firefox state=latest update_cache=true cache_valid_time=600
 
 - name: Install JDK
   hosts: Ubuntu
@@ -70,17 +64,6 @@
       copy: src=files/gvm.config dest=/home/vagrant/.gvm/etc/config owner=vagrant group=vagrant mode=644 backup=no
     - name: Set permissions on the home directory
       file: path=/home/vagrant owner=vagrant group=vagrant recurse=true state=directory
-
-- name: Install Clojure
-  hosts: Ubuntu
-  sudo: False
-  tasks:
-      - name: Create bin directory
-        file: path=/home/vagrant/bin owner=vagrant group=vagrant state=directory mode=755
-      - name: Install Leiningen
-        get_url: url=https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein dest=/home/vagrant/bin/lein mode=0744
-      - name: Set permissions on the home directory
-        file: path=/home/vagrant owner=vagrant group=vagrant recurse=true state=directory
 
 - name: Apache Ant bits
   hosts: Ubuntu
@@ -128,31 +111,6 @@
       - name: Set permissions on the home directory
         file: path=/home/vagrant owner=vagrant group=vagrant recurse=true state=directory
 
-- name: Node
-  hosts: Ubuntu
-  sudo: True
-  tasks:
-      - name: Download Node
-        get_url: url=http://nodejs.org/dist/v0.12.7/node-v0.12.7-linux-x64.tar.gz dest=/root/node.tar.gz mode=444
-      - name: Unpack Node
-        unarchive: src=/root/node.tar.gz dest=/opt copy=no owner=root group=root creates=/opt/node-v0.12.7-linux-x64/LICENSE
-      - name: Soft-link Node
-        file: src=/opt/node-v0.12.7-linux-x64/bin/node path=/usr/local/bin/node state=link
-      - name: Soft-link NPM
-        file: src=/opt/node-v0.12.7-linux-x64/bin/npm path=/usr/local/bin/npm state=link
-      - name: Set permissions on the opt directory
-        file: path=/opt owner=root group=root recurse=true state=directory
-      - name: Update npm
-        command: /usr/local/bin/npm install -g npm@latest
-      - name: Install Yeoman 
-        npm: name=yo global=yes
-      - name: Install Bower 
-        npm: name=bower global=yes
-      - name: Install Grunt 
-        npm: name=grunt-cli global=yes
-      - name: Install JHipster 
-        npm: name=generator-jhipster global=yes
-
 - name: Jetbrains IntelliJ IDEA
   hosts: Ubuntu
   sudo: False
@@ -176,46 +134,6 @@
       - name: Set permissions on the home directory
         file: path=/home/vagrant owner=vagrant group=vagrant recurse=true state=directory
 
-- name: DbVisualizer Database Browser 
-  hosts: Ubuntu
-  sudo: False
-  tasks:
-      - name: Create Software directory 
-        file: path=/home/vagrant/Software owner=vagrant group=vagrant state=directory mode=755
-      - name: Create Downloads directory
-        file: path=/home/vagrant/Downloads owner=vagrant group=vagrant state=directory mode=755
-      - name: Download DbVisualizer 
-        get_url: url=https://www.dbvis.com/product_download/dbvis-9.2.10/media/dbvis_unix_9_2_10.tar.gz dest=/home/vagrant/Downloads/dbvis.tar.gz mode=444 
-      - name: Unpack DbVisualizer 
-        unarchive: src=/home/vagrant/Downloads/dbvis.tar.gz dest=/home/vagrant/Software copy=no owner=vagrant group=vagrant creates=/home/vagrant/Software/DbVisualizer
-      - name: Create Desktop directory 
-        file: path=/home/vagrant/Desktop owner=vagrant group=vagrant state=directory mode=755
-      - name: Copy desktop DbVisualizer file  
-        copy: src=files/Database.desktop dest=/home/vagrant/Desktop/Database.desktop owner=vagrant group=vagrant backup=no mode=755
-      - name: Set permissions on the home directory
-        file: path=/home/vagrant owner=vagrant group=vagrant recurse=true state=directory
-
-- name: logFACES Client 
-  hosts: Ubuntu
-  sudo: False
-  tasks:
-      - name: Create Software directory 
-        file: path=/home/vagrant/Software owner=vagrant group=vagrant state=directory mode=755
-      - name: Create Downloads directory
-        file: path=/home/vagrant/Downloads owner=vagrant group=vagrant state=directory mode=755
-      - name: Download logFACES 
-        get_url: url=http://www.moonlit-software.com/logfaces/downloads/lfc.4.2.1.linux.gtk.x86_64.tar.gz dest=/home/vagrant/Downloads/logfaces.tar.gz mode=444 
-      - name: Unpack logFACES 
-        unarchive: src=/home/vagrant/Downloads/logfaces.tar.gz dest=/home/vagrant/Software copy=no owner=vagrant group=vagrant creates=/home/vagrant/Software/logFacesClient/about.html
-      - name: soft-link the JDK to a normalized location
-        file: src=/usr/lib/jvm/oracle-jdk-8/jre dest=/home/vagrant/Software/logFacesClient/jre owner=root group=root state=link
-      - name: Create Desktop directory 
-        file: path=/home/vagrant/Desktop owner=vagrant group=vagrant state=directory mode=755
-      - name: Copy desktop logFACES file  
-        copy: src=files/logFACES.desktop dest=/home/vagrant/Desktop/logFACES.desktop owner=vagrant group=vagrant backup=no mode=755
-      - name: Set permissions on the home directory
-        file: path=/home/vagrant owner=vagrant group=vagrant recurse=true state=directory
-
 - name: MySQL Tools
   hosts: Ubuntu
   sudo: True
@@ -235,17 +153,6 @@
         file: path=/home/vagrant/Bitbucket owner=vagrant group=vagrant state=directory mode=755
       - name: Create Stash directory
         file: path=/home/vagrant/Stash owner=vagrant group=vagrant state=directory mode=755
-      - name: Create .lazybones directory
-        file: path=/home/vagrant/.lazybones owner=vagrant group=vagrant state=directory mode=755
-      - name: Copy lazybones configurations file
-        copy: src=files/config.groovy dest=/home/vagrant/.lazybones/config.groovy owner=vagrant group=vagrant backup=no mode=744
-
-- name: Install HTTP IE (cURL replacement)
-  hosts: Ubuntu
-  sudo: True
-  tasks:
-      - pip: name=setuptools
-      - pip: name=httpie
 
 - name: Add host names for Dockered services
   hosts: Ubuntu
